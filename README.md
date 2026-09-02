@@ -215,6 +215,54 @@ Supabase Dashboard 提供数据库性能监控。
 
 ---
 
+## 🤖 GitHub Actions 自动部署
+
+本项目已配置 GitHub Actions，推送到 `main` 分支时会自动部署到 Cloudflare Workers。
+
+### 前置条件
+
+1. **创建 Cloudflare API Token**
+   - 前往 [Cloudflare Dashboard](https://dash.cloudflare.com/profile/api-tokens)
+   - 点击 **Create Token**
+   - 使用 **Edit Cloudflare Workers** 模板（或自定义权限）
+   - 确保 Token 具备以下权限：
+     - `Account > Workers Scripts > Edit`
+     - `Zone > Workers Routes > Edit`（如使用自定义域名）
+   - 复制生成的 Token
+
+2. **获取 Account ID**
+   - 前往 [Cloudflare Dashboard](https://dash.cloudflare.com)
+   - 在右侧边栏或 **Workers & Pages** 概览页查看 **Account ID**
+
+### 配置 GitHub Secrets
+
+在你的 GitHub 仓库中：
+
+1. 进入 **Settings** > **Secrets and variables** > **Actions**
+2. 点击 **New repository secret**，添加以下两个 Secret：
+
+| Secret 名称 | 值 |
+|---|---|
+| `CLOUDFLARE_API_TOKEN` | 上一步创建的 API Token |
+| `CLOUDFLARE_ACCOUNT_ID` | 你的 Cloudflare Account ID |
+
+### 工作流说明
+
+工作流文件位于 `.github/workflows/deploy.yml`，流程如下：
+
+```
+Push to main → Checkout → Install Dependencies → Deploy via Wrangler
+```
+
+每次 push 到 `main` 分支后，GitHub Actions 将自动：
+1. 检出代码
+2. 安装 Node.js 20 和项目依赖
+3. 使用 `wrangler deploy` 部署到 Cloudflare Workers
+
+你可以在 GitHub 仓库的 **Actions** 标签页查看部署状态和日志。
+
+---
+
 ## 💡 性能优化建议
 
 1. **启用 Cloudflare 缓存**

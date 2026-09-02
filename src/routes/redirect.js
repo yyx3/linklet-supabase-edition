@@ -34,7 +34,7 @@ const notFoundHTML = `<!DOCTYPE html>
 </html>`;
 
 export async function handleRedirect(context) {
-  const { request, env, url } = context;
+  const { request, env, url, ctx } = context;
 
   try {
     const slug = url.pathname.slice(1);

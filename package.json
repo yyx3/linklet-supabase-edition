@@ -5,7 +5,7 @@
   "main": "src/index.js",
   "type": "module",
   "dependencies": {
-    "postgres": "^3.4.4",
+    "pg": "^8.23.0",
     "wrangler": "^3.26.0"
   },
   "devDependencies": {

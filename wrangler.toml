@@ -1,6 +1,7 @@
 name = "linklet-supabase-edition"
 main = "src/index.js"
 compatibility_date = "2024-01-01"
+compatibility_flags = [ "nodejs_compat" ]
 workers_dev = true
 
 [env.development]
@@ -14,11 +15,10 @@ vars = {
 }
 
 # Hyperdrive 绑定配置
-# 在 wrangler.toml 中配置 Hyperdrive
-# 或通过 Cloudflare Dashboard 配置
-# hyperdrive: {
-#   id = "your-hyperdrive-config-id"
-# }
+# 请将下方 id 替换为你在 Cloudflare Dashboard 中创建的 Hyperdrive Config ID
+[[hyperdrive]]
+binding = "HYPERDRIVE"
+id = "your-hyperdrive-config-id"
 
 # 本地开发时，需要在 .env 文件中配置
 # DATABASE_URL=postgresql://user:password@host:port/database

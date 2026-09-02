@@ -12,7 +12,7 @@ export default {
       return handleCors(request);
     }
 
-    const context = { request, env, url };
+    const context = { request, env, url, ctx };
 
     try {
       if (url.pathname === '/create' && request.method === 'POST') {
