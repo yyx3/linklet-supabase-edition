@@ -5,23 +5,20 @@ workers_dev = true
 
 [env.development]
 vars = {
-  SUPABASE_URL = "https://your-project.supabase.co",
   ENVIRONMENT = "development"
 }
 
-[env.development.secrets]
-SUPABASE_ANON_KEY = ""
-
 [env.production]
 vars = {
-  SUPABASE_URL = "https://your-project.supabase.co",
   ENVIRONMENT = "production"
 }
 
-[env.production.secrets]
-SUPABASE_ANON_KEY = ""
+# Hyperdrive 绑定配置
+# 在 wrangler.toml 中配置 Hyperdrive
+# 或通过 Cloudflare Dashboard 配置
+# hyperdrive: {
+#   id = "your-hyperdrive-config-id"
+# }
 
-# Cloudflare Pages 配置
-[build]
-command = "npm install"
-directory = "dist"
+# 本地开发时，需要在 .env 文件中配置
+# DATABASE_URL=postgresql://user:password@host:port/database

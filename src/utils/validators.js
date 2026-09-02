@@ -25,9 +25,7 @@ export function validateURL(url) {
  */
 export function validateSlug(slug) {
   if (typeof slug !== 'string') return false;
-  // 长度 2-10，只允许字母、数字、下划线、连字符
   if (!/^[a-zA-Z0-9_-]{2,10}$/.test(slug)) return false;
-  // 不能以文件扩展名结尾
   if (/\.[a-zA-Z0-9]+$/.test(slug)) return false;
   return true;
 }
@@ -44,14 +42,4 @@ export function generateRandomString(length = 4) {
     result += characters.charAt(Math.floor(Math.random() * characters.length));
   }
   return result;
-}
-
-/**
- * 验证邮箱
- * @param {string} email
- * @returns {boolean}
- */
-export function validateEmail(email) {
-  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return regex.test(email);
 }

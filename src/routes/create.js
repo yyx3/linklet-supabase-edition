@@ -4,15 +4,13 @@
 
 import { validateURL, validateSlug, generateRandomString } from '../utils/validators';
 import { getCorsHeaders } from '../middleware/cors';
+import { getConnection, executeQueryOne, executeQuery } from '../db/connection';
 
 export async function handleCreate(context) {
-  const { request, supabase, url: originUrl } = context;
+  const { request, env, url: originUrl } = context;
 
   try {
     const { url, slug } = await request.json();
-    const clientIP = request.headers.get('x-forwarded-for') || request.headers.get('cf-connecting-ip') || 'unknown';
-    const userAgent = request.headers.get('user-agent') || 'unknown';
-    const origin = `${originUrl.protocol}//${originUrl.hostname}`;
     const corsHeaders = getCorsHeaders();
 
     // 参数验证
@@ -45,14 +43,19 @@ export async function handleCreate(context) {
       );
     }
 
+    // 获取数据库连接
+    const client = await getConnection(env);
+    const clientIP = request.headers.get('x-forwarded-for') || request.headers.get('cf-connecting-ip') || 'unknown';
+    const userAgent = request.headers.get('user-agent') || 'unknown';
+    const origin = `${originUrl.protocol}//${originUrl.hostname}`;
+
     // 检查 URL 是否已存在
     if (!slug) {
-      const { data: existing } = await supabase
-        .from('links')
-        .select('slug')
-        .eq('url', url)
-        .eq('status', 1)
-        .single();
+      const existing = await executeQueryOne(
+        client,
+        'SELECT slug FROM links WHERE url = $1 AND status = 1 LIMIT 1',
+        [url]
+      );
 
       if (existing) {
         return new Response(
@@ -64,11 +67,11 @@ export async function handleCreate(context) {
 
     // 检查自定义 slug 是否已存在
     if (slug) {
-      const { data: existing } = await supabase
-        .from('links')
-        .select('url')
-        .eq('slug', slug)
-        .single();
+      const existing = await executeQueryOne(
+        client,
+        'SELECT url FROM links WHERE slug = $1 LIMIT 1',
+        [slug]
+      );
 
       if (existing) {
         if (existing.url === url) {
@@ -89,26 +92,16 @@ export async function handleCreate(context) {
     const finalSlug = slug || generateRandomString(4);
 
     // 插入数据库
-    const { data, error } = await supabase
-      .from('links')
-      .insert([
-        {
-          url,
-          slug: finalSlug,
-          ip: clientIP,
-          ua: userAgent,
-          status: 1,
-          created_at: new Date().toISOString(),
-        },
-      ])
-      .select();
+    const result = await executeQuery(
+      client,
+      `INSERT INTO links (url, slug, ip, ua, status, create_time) 
+       VALUES ($1, $2, $3, $4, 1, NOW()) 
+       RETURNING id, slug`,
+      [url, finalSlug, clientIP, userAgent]
+    );
 
-    if (error) {
-      console.error('Database error:', error);
-      return new Response(
-        JSON.stringify({ error: 'Failed to create short link', details: error.message }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (!result || result.length === 0) {
+      throw new Error('Failed to insert link');
     }
 
     return new Response(

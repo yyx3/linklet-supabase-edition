@@ -3,6 +3,7 @@ node_modules/
 dist/
 .env
 .env.local
+.env.*.local
 .DS_Store
 *.log
 npm-debug.log*
@@ -13,4 +14,3 @@ yarn-error.log*
 *.swp
 *.swo
 *~
-.env.*.local

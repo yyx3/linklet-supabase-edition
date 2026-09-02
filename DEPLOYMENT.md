@@ -1,86 +1,110 @@
-# 详细部署指南
+# Hyperdrive 部署详细指南
 
-## 一、完整部署流程
+## 一、配置流程
 
-### 1. 环境准备
+### 1. Supabase 项目设置
 
-```bash
-# 安装 Node.js 依赖
-npm install
+#### 获取连接信息
 
-# 验证 Wrangler 版本
-npx wrangler --version
-```
+1. 登录 [Supabase](https://supabase.com)
+2. 选择你的项目
+3. 进入 **Settings** > **Database**
+4. 记下以下信息：
+   - **Host**: `xxx.supabase.co`
+   - **Port**: `5432`
+   - **Database**: `postgres`
+   - **User**: `postgres`
+   - **Password**: (你的项目密码)
 
-### 2. Supabase 配置
+### 2. 创建 Hyperdrive 配置
 
-#### A. 创建项目
+#### 在 Cloudflare Dashboard 中
 
-1. 访问 [supabase.com](https://supabase.com)
-2. 点击 "New Project"
-3. 填写项目信息，选择你的地区
-4. 等待项目初始化
+1. 进入 **Workers & Pages**
+2. 选择 **Hyperdrive**
+3. 点击 **Create a Hyperdrive Config**
+4. 填写数据库信息：
+   ```
+   Name: linklet-supabase
+   Database: postgres
+   Host: xxx.supabase.co
+   Port: 5432
+   Username: postgres
+   Password: your-project-password
+   Database Name: postgres
+   ```
+5. 点击 **Create Hyperdrive**
+6. 复制配置 ID（如 `abcd1234...`）
 
-#### B. 初始化数据库
-
-在 Supabase 项目的 SQL Editor 中运行 `db/schema.sql`
-
-```sql
--- 粘贴 schema.sql 的全部内容
--- 然后执行
-```
-
-#### C. 获取 API 密钥
-
-1. 进入 Project Settings > API
-2. 复制 `Project URL` 和 `anon public key`
-3. 保存到安全位置
-
-### 3. Cloudflare Workers 配置
-
-#### A. 登录 Cloudflare
+#### 或使用 Wrangler CLI
 
 ```bash
-npx wrangler login
+# 安装最新 wrangler
+npm install -D wrangler@latest
+
+# 创建 Hyperdrive 配置
+wrangler hyperdrive create linklet-supabase \
+  --host=xxx.supabase.co \
+  --database=postgres \
+  --port=5432 \
+  --user=postgres \
+  --password=your-project-password
 ```
 
-这将打开浏览器进行授权。
+### 3. 配置 wrangler.toml
 
-#### B. 创建/更新 wrangler.toml
-
-确保文件中包含：
+添加 Hyperdrive 绑定：
 
 ```toml
 name = "linklet-supabase-edition"
 main = "src/index.js"
 compatibility_date = "2024-01-01"
 
-[env.production]
-vars = {
-  SUPABASE_URL = "https://xxxxxxxxxxxx.supabase.co",
-  ENVIRONMENT = "production"
-}
-
-[env.production.secrets]
-SUPABASE_ANON_KEY = "your-anon-key"
+# Hyperdrive 绑定
+[[hyperdrive]]
+binding = "HYPERDRIVE"
+id = "your-hyperdrive-config-id"  # 从上面复制
 ```
 
-#### C. 设置生产环境密钥
+### 4. 初始化数据库
+
+执行 `db/schema.sql` 创建表和索引：
+
+#### 方法 A：Supabase Dashboard
+
+1. 进入项目的 **SQL Editor**
+2. 创建新查询
+3. 粘贴 `db/schema.sql` 的内容
+4. 执行
+
+#### 方法 B：使用 psql CLI
 
 ```bash
-# 交互式添加密钥
-npx wrangler secret put SUPABASE_ANON_KEY --env production
-
-# 粘贴你的 Supabase 匿名密钥，然后按 Enter
+psql -h xxx.supabase.co \
+     -p 5432 \
+     -U postgres \
+     -d postgres \
+     -f db/schema.sql
 ```
 
-### 4. 本地测试
+#### 方法 C：使用 Supabase CLI
 
 ```bash
-# 启动本地开发服务器
+npm install -g supabase
+
+supabase db push --db-url postgresql://postgres:password@xxx.supabase.co:5432/postgres
+```
+
+### 5. 本地测试
+
+```bash
+# 安装依赖
+npm install
+
+# 启动开发服务器
 npm run dev
 
-# 应该看到类似输出：
+# 输出应该显示：
 # ⛅ wrangler 3.26.0
 # ▲ [wrangler:inf] Ready on http://localhost:8787
 ```
@@ -92,195 +116,186 @@ curl -X POST http://localhost:8787/create \
   -H "Content-Type: application/json" \
   -d '{"url":"https://github.com"}'
 
-# 应该返回：
+# 预期响应：
 # {"slug":"abc123","link":"http://localhost:8787/abc123"}
 ```
 
-### 5. 部署到生产环境
+### 6. 部署到生产
 
 ```bash
-# 部署到 Cloudflare Workers
+# 登录 Cloudflare
+wrangler login
+
+# 部署
 npm run deploy
 
-# 应该看到：
-# ✨ Deployed successfully! URL: https://linklet-supabase-edition.{your-subdomain}.workers.dev
+# 输出应该显示：
+# ✨ Deployed successfully!
+# URL: https://linklet-supabase-edition.{username}.workers.dev
 ```
 
-## 二、自定义域名配置
+---
 
-### 步骤 1：购买域名
+## 二、连接工作原理
 
-在任何域名注册商购买域名（GoDaddy、Namecheap 等）
+### Hyperdrive 连接池
 
-### 步骤 2：添加到 Cloudflare
+Hyperdrive 为你的 Workers 提供了：
 
-1. 登录 Cloudflare Dashboard
-2. 点击 "Add a site"
-3. 输入你的域名
-4. 按照提示修改 DNS 设置
+1. **连接池管理**：自动管理最多 25 个连接
+2. **TCP 重用**：降低延迟
+3. **查询缓存**：可选的结果缓存
+4. **监控**：连接性能指标
 
-### 步骤 3：配置 Workers 路由
+### Workers 中的使用
 
-1. 进入 Workers > Your Worker > Settings
-2. 在 "Domains & Routes" 添加路由
-3. 配置如下：
+```javascript
+// 在 src/db/connection.js
+import { sql } from 'postgres';
 
+export async function getConnection(env) {
+  // env.HYPERDRIVE 是 Hyperdrive 数据库客户端
+  // 它自动处理连接池、重试等
+  return env.HYPERDRIVE.connect();
+}
+
+// 执行查询
+const client = await getConnection(env);
+const result = await client.query(
+  'SELECT * FROM links WHERE slug = $1',
+  ['abc123']
+);
 ```
-域名: yourdomain.com
-路由: yourdomain.com/*
- Workers: linklet-supabase-edition
-```
 
-### 步骤 4：验证
+---
+
+## 三、Hyperdrive vs 其他方案对比
+
+| 方案 | 优点 | 缺点 |
+|------|------|------|
+| **Hyperdrive** | 内置连接池、自动故障转移、低延迟 | 需要 Workers 付费版 |
+| **直连 Supabase** | 简单，无额外配置 | 每个 Worker 创建新连接，性能差 |
+| **Supabase SDK** | 官方支持 | 不适合 Workers（无 Node.js） |
+| **Cloudflare D1** | 内置数据库 | SQLite 性能有限 |
+
+---
+
+## 四、监控和性能优化
+
+### 1. 监控 Hyperdrive 性能
+
+在 Cloudflare Dashboard 中：
+
+1. **Workers** > **Hyperdrive** > 选择配置
+2. 查看指标：
+   - 连接数
+   - 查询延迟
+   - 错误率
+
+### 2. 查看 Workers 日志
 
 ```bash
-# 测试自定义域名
-curl https://yourdomain.com/
+# 实时日志
+wrangler tail
 
-# 创建短链
-curl -X POST https://yourdomain.com/create \
-  -H "Content-Type: application/json" \
-  -d '{"url":"https://example.com"}'
+# 或访问 Dashboard > Workers > Logs
 ```
 
-## 三、监控和日志
+### 3. 优化数据库查询
 
-### 查看 Workers 日志
+```javascript
+// ❌ 多次查询
+for (const slug of slugs) {
+  const result = await client.query('SELECT * FROM links WHERE slug = $1', [slug]);
+}
+
+// ✅ 批量查询
+const result = await client.query(
+  'SELECT * FROM links WHERE slug = ANY($1)',
+  [slugs]
+);
+```
+
+### 4. 缓存策略
+
+```javascript
+// 使用 Workers KV 缓存
+const cached = await KV.get(`link:${slug}`);
+if (cached) {
+  return Response.redirect(cached, 302);
+}
+
+// 查询数据库并缓存
+const result = await db.query('SELECT url FROM links WHERE slug = $1', [slug]);
+await KV.put(`link:${slug}`, result.url, { expirationTtl: 3600 });
+```
+
+---
+
+## 五、常见问题
+
+### Q: Hyperdrive 有免费版本吗？
+A: Hyperdrive 本身免费，但需要 Workers 付费版本（$25/月）才能使用。
+
+### Q: 支持多少个并发连接？
+A: 标准限制是 25 个连接。升级 Workers 付费版可以增加。
+
+### Q: 可以使用多个 Hyperdrive 配置吗？
+A: 可以。在 `wrangler.toml` 中添加多个 `[[hyperdrive]]` 配置。
+
+### Q: 如何处理连接超时？
+A: Hyperdrive 自动处理。如果仍有问题，检查 Supabase 防火墙设置。
+
+### Q: 数据在传输中加密吗？
+A: 是的。Workers 到 Hyperdrive 再到 Supabase 的所有连接都是加密的（TLS）。
+
+---
+
+## 六、迁移和备份
+
+### 备份 Supabase 数据
+
+1. 自动备份（每 7 天一次）
+2. 手动备份：
 
 ```bash
-# 实时查看日志
-npx wrangler tail
+# 使用 pg_dump
+pg_dump -h xxx.supabase.co \
+        -U postgres \
+        -d postgres \
+        -f backup.sql
 ```
-
-### Supabase 数据库监控
-
-1. 进入 Supabase Dashboard
-2. 点击 "Database" > "Logs"
-3. 查看 SQL 执行日志
-
-### 性能分析
-
-Supabase 提供 "Performance" 标签页，可以查看：
-- 查询执行时间
-- 数据库大小
-- 连接池状态
-
-## 四、备份和恢复
-
-### 自动备份
-
-Supabase 免费计划每 7 天自动备份一次。
-
-### 手动备份
-
-在 Supabase 中：
-1. 进入 Settings > Backups
-2. 点击 "Create Backup"
 
 ### 恢复备份
 
-1. 进入 Settings > Backups
-2. 选择要恢复的备份
-3. 点击 "Restore"
-
-## 五、扩展和优化
-
-### 添加认证
-
-Supabase 内置 Supabase Auth：
-
-```javascript
-const { data: { user } } = await supabase.auth.getUser();
+```bash
+psql -h xxx.supabase.co \
+     -U postgres \
+     -d postgres \
+     -f backup.sql
 ```
 
-### 启用 Realtime
+---
 
-在 Supabase 中启用 Realtime，然后订阅表更改：
+## 七、成本优化
 
-```javascript
-supabase
-  .channel('links')
-  .on('postgres_changes', 
-    { event: 'INSERT', schema: 'public', table: 'links' },
-    (payload) => console.log(payload)
-  )
-  .subscribe();
-```
+### 选项 1：免费开发
 
-### 数据库扩容
+- Cloudflare Workers 免费版（100k req/月）
+- Supabase 免费版（500MB）
+- **年成本**：~$100（域名）
 
-如果超过免费层限制，升级 Supabase 计划：
-1. 进入 Supabase Project Settings
-2. 点击 "Billing" > "Upgrade"
-3. 选择付费计划
+### 选项 2：标准生产
 
-## 六、故障排查
+- Cloudflare Workers 付费版（$25/月）
+- Supabase 付费版（$25/月）
+- **年成本**：~$700
 
-### 问题：无法连接 Supabase
+### 选项 3：高级生产
 
-**症状**：创建短链返回 500 错误
-
-**解决**：
-1. 检查 `SUPABASE_URL` 和 `SUPABASE_ANON_KEY` 是否正确
-2. 确保 Supabase 项目已启动
-3. 检查 Workers 日志：`npx wrangler tail`
-
-### 问题：Slug 重复冲突
-
-**症状**：创建短链返回 409 Conflict
-
-**解决**：
-1. 确保 `slug` 列有 UNIQUE 约束
-2. 增加重试逻辑或生成更长的 slug
-
-### 问题：重定向速度慢
-
-**症状**：访问短链耗时 > 1 秒
-
-**解决**：
-1. 在 Supabase 中添加数据库索引
-2. 启用 Cloudflare 缓存
-3. 考虑在 Workers KV 中缓存热门链接
-
-### 问题：数据库连接池耗尽
-
-**症状**：高并发下频繁超时
-
-**解决**：
-1. Supabase 自动管理连接池
-2. 确保 Supabase 计划支持足够的连接数
-3. 减少异步操作中的长连接
-
-## 七、成本估算
-
-### Cloudflare Workers
-- **免费层**：每月 100,000 次请求
-- **付费**：$0.50 per 10M requests
-
-### Supabase
-- **免费层**：500MB 数据库 + 1GB 带宽
-- **付费**：从 $25/月 开始
-
-### 域名
-- **首年**：$8-15/年（取决于 TLD）
-- **续费**：$10-15/年
-
-## 八、性能优化建议
-
-1. **启用 Cloudflare 缓存**
-   - 将 HTML 主页缓存 1 小时
-   - 将 404 页面缓存 10 分钟
-
-2. **KV 缓存热门链接**
-   - 使用 Cloudflare Workers KV 缓存常访问的链接
-
-3. **数据库连接优化**
-   - 使用连接池（Supabase 已内置）
-   - 避免 N+1 查询问题
-
-4. **监控指标**
-   - 设置告警监控错误率
-   - 监控 p95 响应时间
+- Cloudflare Workers 付费版 + 额外容量
+- Supabase 付费版 + 更多存储
+- **年成本**：$1,000+
 
 ---
 
