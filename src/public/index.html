@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Linklet - URL 缩短器</title>
+    <style>
+      :root {
+        --color-primary: #5c7cfa;
+        --color-primary-dark: #4263eb;
+        --color-primary-alpha: #5c7cfa50;
+        --body-color: #495057;
+        --body-bg: #f8f9fa;
+        --border-color: #dee2e6;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        max-width: 30rem;
+        margin: 0 auto;
+        padding: 2rem;
+        color: var(--body-color);
+        background: var(--body-bg);
+        font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        line-height: 1.5;
+        -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+        text-rendering: optimizelegibility;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      a {
+        color: var(--color-primary);
+        text-decoration: none;
+        transition: color 0.3s;
+      }
+
+      a:hover {
+        color: var(--color-primary-dark);
+        text-decoration: underline;
+      }
+
+      h1 {
+        font-size: 3rem;
+        font-weight: 300;
+        text-align: center;
+        opacity: 0.2;
+        margin-bottom: 2rem;
+      }
+
+      main[x-cloak] {
+        opacity: 0;
+      }
+
+      main:not([x-cloak]) {
+        opacity: 1;
+        transition: opacity 0.3s;
+      }
+
+      input,
+      button {
+        -webkit-appearance: none;
+        appearance: none;
+        display: block;
+        width: 100%;
+        padding: 0.5rem 1rem;
+        border: 1px solid var(--border-color);
+        border-radius: 0.25rem;
+        box-sizing: border-box;
+        color: #33404d;
+        line-height: inherit;
+        font-size: 1rem;
+        transition: border 0.3s, box-shadow 0.3s;
+      }
+
+      input:focus {
+        box-shadow: 0 0 0 0.25rem var(--color-primary-alpha);
+        border-color: var(--color-primary);
+        outline: 0;
+      }
+
+      input {
+        margin-bottom: 1rem;
+      }
+
+      button {
+        background-color: var(--color-primary);
+        color: white;
+        border: none;
+        cursor: pointer;
+        font-weight: 500;
+        margin-bottom: 1rem;
+      }
+
+      button:hover {
+        background-color: var(--color-primary-dark);
+      }
+
+      button:active {
+        transform: scale(0.98);
+      }
+
+      .result {
+        margin-top: 2rem;
+        padding: 1rem;
+        background: white;
+        border: 1px solid var(--border-color);
+        border-radius: 0.25rem;
+        display: none;
+      }
+
+      .result.show {
+        display: block;
+      }
+
+      .result-url {
+        word-break: break-all;
+        padding: 0.5rem;
+        background: #f0f0f0;
+        border-radius: 0.25rem;
+        margin: 0.5rem 0;
+        font-family: monospace;
+      }
+
+      .copy-btn {
+        background-color: #28a745;
+        margin-top: 0.5rem;
+      }
+
+      .copy-btn:hover {
+        background-color: #218838;
+      }
+
+      .error {
+        color: #dc3545;
+        padding: 0.5rem;
+        margin-top: 0.5rem;
+      }
+
+      .loading {
+        display: none;
+        text-align: center;
+      }
+
+      .loading.show {
+        display: block;
+      }
+
+      details {
+        margin: 1rem 0 2rem;
+        border: 1px solid var(--border-color);
+        border-radius: 0.25rem;
+        transition: background 0.3s;
+      }
+
+      details[open] {
+        background: #fff;
+      }
+
+      details summary {
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+        user-select: none;
+        cursor: pointer;
+        opacity: 0.8;
+        outline: 0;
+      }
+
+      details div {
+        padding: 1rem;
+        border-top: 1px solid var(--border-color);
+      }
+
+      details small {
+        margin: 0;
+        font-size: 0.875rem;
+        line-height: 2;
+      }
+
+      .api-example {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 0.25rem;
+        overflow-x: auto;
+      }
+
+      code {
+        font-family: 'Courier New', monospace;
+        background: #f0f0f0;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main x-cloak>
+      <h1>Linklet</h1>
+
+      <form id="shortenerForm">
+        <input
+          type="url"
+          id="urlInput"
+          placeholder="粘贴长链接 (Paste your long URL)"
+          required
+          aria-label="URL to shorten"
+        />
+        <input
+          type="text"
+          id="slugInput"
+          placeholder="自定义短链(可选) (Custom slug - optional)"
+          aria-label="Custom slug"
+        />
+        <button type="submit" id="submitBtn">生成短链 (Shorten)</button>
+      </form>
+
+      <div id="loading" class="loading">
+        <p>正在生成... (Processing...)</p>
+      </div>
+
+      <div id="result" class="result">
+        <p>✅ 短链生成成功</p>
+        <p>短链:</p>
+        <div class="result-url" id="resultUrl"></div>
+        <button type="button" class="copy-btn" id="copyBtn">复制 (Copy)</button>
+        <div id="errorMsg" class="error"></div>
+      </div>
+    </main>
+
+    <script>
+      const form = document.getElementById('shortenerForm');
+      const urlInput = document.getElementById('urlInput');
+      const slugInput = document.getElementById('slugInput');
+      const submitBtn = document.getElementById('submitBtn');
+      const loading = document.getElementById('loading');
+      const result = document.getElementById('result');
+      const resultUrl = document.getElementById('resultUrl');
+      const copyBtn = document.getElementById('copyBtn');
+      const errorMsg = document.getElementById('errorMsg');
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        errorMsg.textContent = '';
+        result.classList.remove('show');
+        loading.classList.add('show');
+        submitBtn.disabled = true;
+
+        try {
+          const response = await fetch('/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              url: urlInput.value,
+              slug: slugInput.value || undefined,
+            }),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.error || data.message || '生成失败');
+          }
+
+          resultUrl.textContent = data.link;
+          result.classList.add('show');
+          urlInput.value = '';
+          slugInput.value = '';
+        } catch (error) {
+          errorMsg.textContent = '❌ ' + error.message;
+          result.classList.add('show');
+        } finally {
+          loading.classList.remove('show');
+          submitBtn.disabled = false;
+        }
+      });
+
+      copyBtn.addEventListener('click', () => {
+        const text = resultUrl.textContent;
+        navigator.clipboard.writeText(text).then(() => {
+          const originalText = copyBtn.textContent;
+          copyBtn.textContent = '已复制 (Copied!)';
+          setTimeout(() => {
+            copyBtn.textContent = originalText;
+          }, 2000);
+        });
+      });
+
+      // 移除 x-cloak
+      document.querySelector('main').removeAttribute('x-cloak');
+    </script>
+  </body>
+</html>

@@ -1,0 +1,27 @@
+{
+  "name": "linklet-supabase-edition",
+  "version": "2.0.0",
+  "description": "A URL Shortener created using Cloudflare Workers + Supabase PostgreSQL",
+  "main": "src/index.js",
+  "type": "module",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.38.0",
+    "wrangler": "^3.26.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0"
+  },
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "node tests/test.js"
+  },
+  "keywords": [
+    "url-shortener",
+    "cloudflare-workers",
+    "supabase",
+    "postgresql"
+  ],
+  "author": "yyx3",
+  "license": "MIT"
+}

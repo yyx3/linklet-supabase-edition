@@ -1,0 +1,27 @@
+name = "linklet-supabase-edition"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+workers_dev = true
+
+[env.development]
+vars = {
+  SUPABASE_URL = "https://your-project.supabase.co",
+  ENVIRONMENT = "development"
+}
+
+[env.development.secrets]
+SUPABASE_ANON_KEY = ""
+
+[env.production]
+vars = {
+  SUPABASE_URL = "https://your-project.supabase.co",
+  ENVIRONMENT = "production"
+}
+
+[env.production.secrets]
+SUPABASE_ANON_KEY = ""
+
+# Cloudflare Pages 配置
+[build]
+command = "npm install"
+directory = "dist"
