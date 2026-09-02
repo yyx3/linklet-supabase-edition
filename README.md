@@ -2,7 +2,7 @@
 
 一个使用 **Cloudflare Workers** + **Supabase PostgreSQL** (via **Hyperdrive**) 创建的 URL 缩短器。
 
-## 🚀 核心改进
+## 🚀 核心改进。
 
 相比原始的 D1 版本，本版本提供了以下改进：
 
